@@ -6,66 +6,93 @@
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+        }
+
+        .visible {
+            background: #eee;
+            width: 210px;
+            display: flex;
+            flex-direction: column;
+            padding: 5px;
+            border-collapse: separate;
+            border-spacing: 15px;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
         }
 
         .select-month,
         .select-year {
             display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
         }
 
         #year,
         #month-title {
-            width: 100px;
             text-align: center;
+        }
+
+        #date-table td,
+        #date-table th {
+            padding: 5px;
         }
 
         /* Refactor into .cell .cell-active */
         .cell {
             text-align: center;
-            background: #eee;
+            background: #fff;
+            border-radius: 2px;
+            border-width: 5px;
         }
 
         .cell-active {
             text-align: center;
-            background: red;
+            background: #ccc;
         }
 
-        /* #date-table {
-            border-collapse: collapse;
+        button {
+            background: #ccc;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
         }
-
-        #date-table td,
-        #date-table th {
-            border: 1px solid black;
-        } */
     </style>
 </head>
 
 <body>
     <input type="text" id="input-date">
 
-    <div id="datepicker" style="display:none"></div>
+    <div id="datepicker" class="hidden"></div>
 
     <script type="text/javascript">
 
         let options = {
             months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'Novemeber', 'Decemeber'],
-            days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            days: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
         }
 
         // TODO:
+        // Make the datepicker Object Oriented
         // Make the date a single HTML tag, by puttin everything in JS
-        // Style days with classes
-        // Highlight current day of month
         // Select date with manual keyboard input
         // Today button
-        // If date input is empty, use current date, else use the input values to display those dates
 
+        // Initialization
         // Get current year and month
         let currentDate = new Date();
         let currentYear = currentDate.getFullYear();
         let currentMonth = currentDate.getMonth();
         let currentDay = currentDate.getDate();
+
+        // View values
+        let viewDate = currentDate;
+        let viewYear = currentYear;
+        let viewMonth = currentMonth;
+        let viewDay = currentDay;
 
         // Selected values
         let selectedDate = currentDate;
@@ -73,15 +100,31 @@
         let selectedMonth = currentMonth;
         let selectedDay = currentDay;
 
-        // Update the input on clicked day
-        function getVal(e) {
-            let day = e.innerText;
-            document.getElementById("input-date").value = `${day}.${selectedMonth + 1}.${selectedYear}`;
-            document.getElementById("datepicker").style.display = "none";
-        }
-
         // Displaying the datepicker
-        document.getElementById("input-date").addEventListener("focus", () => {
+        document.getElementById("input-date").addEventListener("click", () => {
+
+            let inputDate = document.getElementById("input-date").value;
+            // If date input is not empty, use the input date, else use current date.
+            if (inputDate != "") {
+
+                let inputDateParts = inputDate.split(".")
+                let rearrangedParts = `${inputDateParts[1]}.${inputDateParts[0]}.${inputDateParts[2]}`
+                let reformattedDate = new Date(rearrangedParts);
+
+                selectedYear = reformattedDate.getFullYear();
+                selectedMonth = reformattedDate.getMonth();
+                selectedDay = reformattedDate.getDate();
+
+                viewDate = selectedDate;
+                viewYear = selectedYear;
+                viewMonth = selectedMonth;
+                viewDay = selectedDay;
+            }
+
+            renderDatepicker();
+        });
+
+        function renderDatepicker() {
 
             document.getElementById("datepicker").innerHTML = "";
             document.getElementById("datepicker").innerHTML = `
@@ -95,108 +138,120 @@
                     <div id="month-title"></div>
                     <button id="next-month">&#62</button>
                 </div>
-
+                        
                 <table id="date-table"></table>
             `
 
             getDays();
-            document.getElementById("datepicker").style.display = "block";
-            document.getElementById("year").innerHTML = selectedYear;
+
+            document.getElementById("datepicker").className = "visible";
+            document.getElementById("year").innerHTML = viewYear;
 
             document.getElementById("next-y").addEventListener("click", () => {
-                selectedYear += 1;
-                document.getElementById("year").innerHTML = selectedYear;
+                viewYear += 1;
+                setYear();
                 getDays();
             });
 
             document.getElementById("prev-y").addEventListener("click", () => {
-                selectedYear -= 1;
-                document.getElementById("year").innerHTML = selectedYear;
+                viewYear -= 1;
+                setYear();
                 getDays();
             });
 
             document.getElementById("next-month").addEventListener("click", () => {
-                if (selectedMonth < 11) {
-                    selectedMonth += 1;
-                    getDays();
+                if (viewMonth < 11) {
+                    viewMonth += 1;
+                } else {
+                    viewYear += 1;
+                    setYear();
+                    viewMonth = 0;
                 }
+                getDays();
             });
 
             document.getElementById("prev-month").addEventListener("click", () => {
-                if (selectedMonth > 0) {
-                    selectedMonth -= 1;
-                    getDays();
+                if (viewMonth > 0) {
+                    viewMonth -= 1;
+                } else {
+                    viewYear -= 1;
+                    setYear();
+                    viewMonth = 11;
                 }
+                getDays();
             });
-        });
 
-        function getDays() {
-
-            // console.log(`selectedMonth: ${selectedMonth}, year: ${year}, month: ${selectedMonth}`);
-
-            document.getElementById("date-table").innerHTML = "";
-
-            // Set the month text
-            document.getElementById("month-title").innerHTML = options.months[selectedMonth];
-
-            let headers = "";
-            options.days.map(day => {
-                headers += `<th>${day}</th>`
-            })
-            let thead = `<thead>${headers}</thead>`
-
-            // Get first and last dates based on year and month.
-            let firstDate = new Date(selectedYear, selectedMonth, 1);
-            let lastDate = new Date(selectedYear, selectedMonth + 1, 0);
-
-            // Returns the day of the month (1-31) for the specified date according to local time.
-            let lastDay = lastDate.getDate();
-
-            // Returns the day of the week (0-6) for the specified date according to local time.
-            let sundayFirstOffset = firstDate.getDay(); // 0 is Sunday, 6 is Saturday.
-            // Make Monday the first day, by shifting everything back by one.
-            let offset = firstDate.getDay() === 0 ? 6 : firstDate.getDay() - 1; // 0 is Monday, 6 is Sunday.
-
-            // console.log(`sundayFirstOffset: ${sundayFirstOffset}`);
-            // console.log(`offset: ${offset}`);
-
-            // console.log(`firstDate: ${firstDate}`);
-            // console.log(`lastDate: ${lastDate}`);
-            // console.log(lastDay);
-
-            let dayCount = 1;
-            let rows = "";
-            for (let i = 0; i < 6; i++) {
-                if (dayCount < lastDay) { // Prevent extra row with the last day
-                    let cells = "";
-                    for (let j = 0; j < 7; j++) {
-                        if (offset == 0) {
-
-                            let cellClass = "";
-                            if (currentYear === selectedYear && currentMonth === selectedMonth && currentDay === dayCount) {
-                                cellClass = "cell-active"
-                            } else {
-                                cellClass = "cell"
-                            }
-
-                            // Prevent making extra days like January 32nd for the last row.
-                            if (dayCount <= lastDay) {
-                                cells += `<td class=${cellClass} onclick="getVal(this)">${dayCount}</td>`
-                                dayCount++;
-                            }
-                        } else { // Make empty cells until matching day reached.
-                            cells += `<td></td>`
-                            offset--;
-                        }
-                    }
-                    rows += `<tr id="row-${i}">${cells}</tr>`;
-                }
+            function setYear() {
+                document.getElementById("year").innerHTML = viewYear;
             }
 
-            let tbody = `<tbody>${rows}</tbody>`;
+            function getDays() {
 
-            document.getElementById("date-table").innerHTML = `${thead}${tbody}`;
-            // console.log(`dayCount: ${dayCount}`);
+                document.getElementById("date-table").innerHTML = "";
+
+                // Set the month text
+                document.getElementById("month-title").innerHTML = options.months[viewMonth];
+
+                let headers = "";
+                options.days.map(day => {
+                    headers += `<th>${day}</th>`
+                })
+                let thead = `<thead>${headers}</thead>`
+
+                // Get first and last dates based on year and month.
+                let firstDate = new Date(viewYear, viewMonth, 1);
+                let lastDate = new Date(viewYear, viewMonth + 1, 0);
+
+                // Returns the day of the month (1-31) for the specified date according to local time.
+                let lastDay = lastDate.getDate();
+
+                // Returns the day of the week (0-6) for the specified date according to local time.
+                // let offset = firstDate.getDay(); // 0 is Sunday, 6 is Saturday.
+
+                // Make Monday the first day, by shifting everything back by one.
+                let offset = firstDate.getDay() === 0 ? 6 : firstDate.getDay() - 1; // 0 is Monday, 6 is Sunday.
+
+                let dayCount = 1;
+                let rows = "";
+                for (let i = 0; i < 6; i++) {
+                    if (dayCount <= lastDay) { // Prevent extra row with the last day
+                        let cells = "";
+                        for (let j = 0; j < 7; j++) {
+                            if (offset == 0) {
+
+                                let cellClass = "";
+                                if (viewYear === selectedYear && viewMonth === selectedMonth && selectedDay === dayCount) {
+                                    cellClass = "cell-active"
+                                } else {
+                                    cellClass = "cell"
+                                }
+
+                                // Prevent making extra days like January 32nd for the last row.
+                                if (dayCount <= lastDay) {
+                                    cells += `<td class=${cellClass} onclick="setDate(this)">${dayCount}</td>`
+                                    dayCount++;
+                                }
+                            } else { // Make empty cells until matching day reached.
+                                cells += `<td></td>`
+                                offset--;
+                            }
+                        }
+                        rows += `<tr id="row-${i}">${cells}</tr>`;
+                    }
+                }
+
+                let tbody = `<tbody>${rows}</tbody>`;
+
+                document.getElementById("date-table").innerHTML = `${thead}${tbody}`;
+            }
+        };
+
+        // Update the input on clicked day
+        function setDate(e) {
+            let day = e.innerText;
+            selectedDay = day;
+            document.getElementById("input-date").value = `${day}.${viewMonth + 1}.${viewYear}`;
+            document.getElementById("datepicker").className = "hidden";
         }
 
     </script>
